@@ -17,8 +17,9 @@
 static void print_usage() {
     fprintf(stderr, "Usage:\n"
             "    fsst_cli -m train -i <in_file> -d <out_dict_file>\n"
-            "    fsst_cli -m encode -i <in_file> -o <out_encoded_file> [-d <in_dict_file>]\n"
-            "    fsst_cli -m decode -i <in_file> -o <out_decoded_file> [-d <in_dict_file>]\n");
+            "    fsst_cli -m dump -d <out_dict_file>\n"
+            "    fsst_cli -m encode -i <in_file> -o <out_encoded_file> -d <in_dict_file>\n"
+            "    fsst_cli -m decode -i <in_file> -o <out_decoded_file> -d <in_dict_file>\n");
 }
 
 class FsstEncoderDefer {
@@ -304,6 +305,19 @@ static bool fsst_encode(const char* in_file, const char* out_file, const char* d
     return true;
 }
 
+int fsst_dump(const char* dict_file) {
+    // load dictionary
+    fsst_encoder_t *encoder = load_dict(dict_file);
+    if ( encoder == nullptr ) {
+        return false;
+    }
+    fsst_decoder_t decoder = fsst_decoder(encoder);
+    fsst_destroy(encoder);
+
+    fsst_decoder_dump(&decoder);
+    return 0;
+}
+
 int fsst_decode(const char* in_file, const char* out_file, const char* dict_file) {
     // load dictionary
     fsst_encoder_t *encoder = load_dict(dict_file);
@@ -397,6 +411,13 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         }
         fsst_train(dict_file, in_file);
+    } else if (strcmp(mode, "dump") == 0) {
+        // Encode the input file
+        if (dict_file == nullptr) {
+            print_usage();
+            exit(EXIT_FAILURE);
+        }
+        fsst_dump(dict_file);
     } else if (strcmp(mode, "encode") == 0) {
         // Encode the input file
         if (in_file == nullptr || out_file == nullptr || dict_file == nullptr) {

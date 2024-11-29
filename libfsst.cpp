@@ -18,6 +18,8 @@
 #include "libfsst.hpp"
 #include "fsst_utils.hpp"
 
+#define FSST_CORRUPT 32774747032022883 /* 7-byte number in little endian containing "corrupt" */
+
 Symbol concat(Symbol a, Symbol b) {
    Symbol s;
    u32 length = a.length()+b.length();
@@ -240,6 +242,27 @@ bool SymbolTable::deserialize(std::string_view& b) {
    }
 
    return true;
+}
+
+void fsst_decoder_dump(fsst_decoder_t *decoder) {
+   for(int n=0; n<sizeof(decoder->len)/sizeof(decoder->len[0]); ++n) {
+      unsigned int len = decoder->len[n];
+      unsigned long long sym = decoder->symbol[n];
+      if (sym != FSST_CORRUPT) {
+         printf("symbol[0x%02x]: len=%d, hex=0x", n, len);
+         for (unsigned int i=0; i<len; i++) {
+            unsigned char c = (unsigned char)((sym >> (i*8)) & 0xff);
+            printf("%02x", c);
+         }
+
+         printf(", str=\"");
+         for (unsigned int i=0; i<len; i++) {
+            unsigned char c = (unsigned char)((sym >> (i*8)) & 0xff);
+            printf("%c", (isprint(c) ? c : '.'));
+         }
+         printf("\"\n");
+      }
+   }
 }
 
 namespace std {
@@ -763,7 +786,6 @@ extern "C" u32 fsst_export(fsst_encoder_t *encoder, u8 *buf) {
    return pos; // length of what was serialized
 }
 
-#define FSST_CORRUPT 32774747032022883 /* 7-byte number in little endian containing "corrupt" */
 
 extern "C" u32 fsst_import(fsst_decoder_t *decoder, u8 *buf) {
    u64 version = 0;
